@@ -2,6 +2,7 @@ import { Client, GatewayIntentBits } from "discord.js";
 import { config } from "./config";
 import { commands } from "./commands";
 import { logger } from "./utils/logger";
+import { initPlayer } from "./services/music/player";
 
 const client = new Client({
   intents: [
@@ -12,7 +13,8 @@ const client = new Client({
   ],
 });
 
-client.once("ready", () => {
+client.once("ready", async () => {
+  await initPlayer(client);
   logger.info(`Bot online como ${client.user?.tag}`);
 });
 

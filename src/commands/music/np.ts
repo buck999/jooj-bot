@@ -1,6 +1,6 @@
 import { Message } from "discord.js";
+import { useQueue } from "discord-player";
 import { Command } from "../../types";
-import { getCurrentTrack } from "../../services/music/queue";
 import { nowPlayingEmbed, errorEmbed } from "../../utils/embeds";
 
 export const npCommand: Command = {
@@ -9,7 +9,7 @@ export const npCommand: Command = {
   description: "Mostra a música tocando agora",
 
   async execute(message: Message): Promise<void> {
-    const track = getCurrentTrack(message.guildId!);
+    const track = useQueue(message.guildId!)?.currentTrack;
     if (!track) {
       await message.reply({ embeds: [errorEmbed("Não há música tocando.")] });
       return;

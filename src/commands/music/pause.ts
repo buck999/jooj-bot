@@ -1,6 +1,6 @@
 import { Message } from "discord.js";
+import { useQueue } from "discord-player";
 import { Command } from "../../types";
-import { pausePlayer } from "../../services/music/player";
 import { errorEmbed, successEmbed } from "../../utils/embeds";
 
 export const pauseCommand: Command = {
@@ -14,8 +14,8 @@ export const pauseCommand: Command = {
       return;
     }
 
-    const paused = pausePlayer(message.guildId!);
-    if (paused) {
+    const queue = useQueue(message.guildId!);
+    if (queue?.isPlaying() && !queue.node.isPaused() && queue.node.pause()) {
       await message.reply({ embeds: [successEmbed("Música pausada.")] });
     } else {
       await message.reply({ embeds: [errorEmbed("Não há música tocando.")] });

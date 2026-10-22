@@ -1,112 +1,90 @@
-import {
-  AudioPlayer,
-  AudioPlayerStatus,
-  AudioResource,
-  VoiceConnection,
-  createAudioPlayer,
-  createAudioResource,
-  NoSubscriberBehavior,
-} from "@discordjs/voice";
-import play from "play-dl";
+import { Client, GuildTextBasedChannel, User, VoiceBasedChannel } from "discord.js";
+import { Player, GuildQueueEvent } from "discord-player";
+import { DefaultExtractors } from "@discord-player/extractor";
+import { YoutubeSabrExtractor } from "discord-player-googlevideo";
 import { logger } from "../../utils/logger";
-import { getCurrentTrack, nextTrack, clearQueue } from "./queue";
+import { nowPlayingEmbed, successEmbed } from "../../utils/embeds";
 
-const players = new Map<string, AudioPlayer>();
+let player: Player | undefined;
 
-function getOrCreatePlayer(guildId: string): AudioPlayer {
-  const existing = players.get(guildId);
-  if (existing) return existing;
+export async function initPlayer(client: Client): Promise<Player> {
+  if (player) return player;
 
-  const player = createAudioPlayer({
-    behaviors: { noSubscriber: NoSubscriberBehavior.Pause },
+  player = new Player(client);
+
+  player.on("debug", (message) => logger.debug(`[player] ${message}`));
+  player.events.on("debug", (_queue, message) => logger.debug(`[queue] ${message}`));
+
+  player.events.on(GuildQueueEvent.PlayerStart, (queue, track) => {
+    const channel = queue.metadata as GuildTextBasedChannel;
+    channel.send({ embeds: [nowPlayingEmbed(track)] }).catch(() => {});
   });
 
-  players.set(guildId, player);
+  player.events.on(GuildQueueEvent.AudioTrackAdd, (queue, track) => {
+    if (!queue.isPlaying()) return;
+    const channel = queue.metadata as GuildTextBasedChannel;
+    channel.send({ embeds: [successEmbed(`Adicionado à fila: **${track.cleanTitle}**`)] }).catch(() => {});
+  });
+
+  player.events.on(GuildQueueEvent.AudioTracksAdd, (queue, tracks) => {
+    const channel = queue.metadata as GuildTextBasedChannel;
+    channel.send({ embeds: [successEmbed(`Adicionadas **${tracks.length}** músicas à fila.`)] }).catch(() => {});
+  });
+
+  player.events.on(GuildQueueEvent.EmptyQueue, (queue) => {
+    const channel = queue.metadata as GuildTextBasedChannel;
+    channel.send({ embeds: [successEmbed("Fila vazia!")] }).catch(() => {});
+  });
+
+  player.events.on(GuildQueueEvent.PlayerError, (_queue, error, track) => {
+    logger.error(`Erro no player tocando ${track?.cleanTitle}:`, error);
+  });
+
+  player.events.on(GuildQueueEvent.Error, (_queue, error) => {
+    logger.error("Erro na fila:", error);
+  });
+
+  await player.extractors.loadMulti(DefaultExtractors);
+  await player.extractors.register(YoutubeSabrExtractor, {});
+
   return player;
 }
 
-export async function playCurrentTrack(
-  guildId: string,
-  connection: VoiceConnection,
-  onQueueEnd: () => void,
-): Promise<void> {
-  const track = getCurrentTrack(guildId);
-  if (!track) {
-    onQueueEnd();
-    return;
-  }
-
-  const player = getOrCreatePlayer(guildId);
-  connection.subscribe(player);
-
+function normalizeQuery(query: string): string {
   try {
-    const stream = await play.stream(track.url);
-    const resource: AudioResource = createAudioResource(stream.stream, {
-      inputType: stream.type,
-    });
-
-    player.play(resource);
-
-    player.removeAllListeners(AudioPlayerStatus.Idle);
-    player.on(AudioPlayerStatus.Idle, () => {
-      const next = nextTrack(guildId);
-      if (next) {
-        playCurrentTrack(guildId, connection, onQueueEnd);
-      } else {
-        onQueueEnd();
-      }
-    });
-
-    player.removeAllListeners("error");
-    player.on("error", (error) => {
-      logger.error(`Erro no player (guild ${guildId}):`, error);
-      const next = nextTrack(guildId);
-      if (next) {
-        playCurrentTrack(guildId, connection, onQueueEnd);
-      } else {
-        onQueueEnd();
-      }
-    });
-  } catch (error) {
-    logger.error(`Erro ao criar stream para ${track.url}:`, error);
-    const next = nextTrack(guildId);
-    if (next) {
-      await playCurrentTrack(guildId, connection, onQueueEnd);
-    } else {
-      onQueueEnd();
+    // Mix/Radio do YouTube (list=RD...) não são acessíveis pela API,
+    // então remove o parâmetro list e toca só o vídeo
+    const url = new URL(query);
+    const listId = url.searchParams.get("list");
+    if (listId && listId.startsWith("RD")) {
+      url.searchParams.delete("list");
+      url.searchParams.delete("start_radio");
+      url.searchParams.delete("index");
+      return url.toString();
     }
+    return query;
+  } catch {
+    // Não é URL — prefixar com ytsearch: para buscar no YouTube
+    return `ytsearch:${query}`;
   }
 }
 
-export function pausePlayer(guildId: string): boolean {
-  const player = players.get(guildId);
-  if (!player) return false;
-  return player.pause();
-}
+export async function playQuery(
+  voiceChannel: VoiceBasedChannel,
+  query: string,
+  textChannel: GuildTextBasedChannel,
+  requestedBy: User,
+): Promise<void> {
+  if (!player) throw new Error("Player não inicializado.");
 
-export function resumePlayer(guildId: string): boolean {
-  const player = players.get(guildId);
-  if (!player) return false;
-  return player.unpause();
-}
-
-export function stopPlayer(guildId: string): void {
-  const player = players.get(guildId);
-  if (player) {
-    player.stop(true);
-    player.removeAllListeners();
-    players.delete(guildId);
-  }
-  clearQueue(guildId);
-}
-
-export function skipCurrent(guildId: string): boolean {
-  const player = players.get(guildId);
-  if (!player) return false;
-  return player.stop();
-}
-
-export function isPlaying(guildId: string): boolean {
-  const player = players.get(guildId);
-  return player?.state.status === AudioPlayerStatus.Playing;
+  await player.play(voiceChannel, normalizeQuery(query), {
+    requestedBy,
+    nodeOptions: {
+      metadata: textChannel,
+      leaveOnEmpty: true,
+      leaveOnEmptyCooldown: 30000,
+      leaveOnEnd: true,
+      leaveOnEndCooldown: 60000,
+    },
+  });
 }

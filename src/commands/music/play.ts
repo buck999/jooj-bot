@@ -1,10 +1,8 @@
 import { Message } from "discord.js";
-import { joinVoiceChannel, getVoiceConnection } from "@discordjs/voice";
 import { Command } from "../../types";
-import { resolveTracks } from "../../services/music/resolver";
-import { addTrack, getCurrentTrack } from "../../services/music/queue";
-import { playCurrentTrack, stopPlayer } from "../../services/music/player";
-import { nowPlayingEmbed, errorEmbed, successEmbed } from "../../utils/embeds";
+import { playQuery } from "../../services/music/player";
+import { errorEmbed } from "../../utils/embeds";
+import { logger } from "../../utils/logger";
 
 export const playCommand: Command = {
   name: "play",
@@ -24,49 +22,15 @@ export const playCommand: Command = {
       return;
     }
 
-    const guildId = message.guildId!;
-    if ("sendTyping" in message.channel) {
-      await message.channel.sendTyping();
-    }
+    if (!message.inGuild()) return;
 
-    const tracks = await resolveTracks(query, message.author.displayName);
-    if (tracks.length === 0) {
-      await message.reply({ embeds: [errorEmbed("Não encontrei nenhuma música.")] });
-      return;
-    }
+    await message.channel.sendTyping();
 
-    const wasEmpty = !getCurrentTrack(guildId);
-
-    for (const track of tracks) {
-      addTrack(guildId, track);
-    }
-
-    let connection = getVoiceConnection(guildId);
-    if (!connection) {
-      connection = joinVoiceChannel({
-        channelId: voiceChannel.id,
-        guildId,
-        adapterCreator: message.guild!.voiceAdapterCreator,
-      });
-    }
-
-    if (tracks.length === 1) {
-      if (wasEmpty) {
-        await message.reply({ embeds: [nowPlayingEmbed(tracks[0])] });
-      } else {
-        await message.reply({ embeds: [successEmbed(`Adicionado à fila: **${tracks[0].title}**`)] });
-      }
-    } else {
-      await message.reply({
-        embeds: [successEmbed(`Adicionadas **${tracks.length}** músicas à fila.`)],
-      });
-    }
-
-    if (wasEmpty) {
-      playCurrentTrack(guildId, connection, () => {
-        stopPlayer(guildId);
-        connection?.destroy();
-      });
+    try {
+      await playQuery(voiceChannel, query, message.channel, message.author);
+    } catch (error) {
+      logger.error(`Erro ao tocar "${query}":`, error);
+      await message.reply({ embeds: [errorEmbed("Não consegui tocar essa música.")] });
     }
   },
 };

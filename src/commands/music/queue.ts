@@ -1,6 +1,6 @@
 import { Message } from "discord.js";
+import { useQueue } from "discord-player";
 import { Command } from "../../types";
-import { getTracks, getCurrentIndex } from "../../services/music/queue";
 import { queueEmbed, errorEmbed } from "../../utils/embeds";
 
 export const queueCommand: Command = {
@@ -9,14 +9,15 @@ export const queueCommand: Command = {
   description: "Mostra a fila de músicas",
 
   async execute(message: Message): Promise<void> {
-    const guildId = message.guildId!;
-    const tracks = getTracks(guildId);
+    const queue = useQueue(message.guildId!);
+    const current = queue?.currentTrack;
 
-    if (tracks.length === 0) {
+    if (!queue || !current) {
       await message.reply({ embeds: [errorEmbed("A fila está vazia.")] });
       return;
     }
 
-    await message.reply({ embeds: [queueEmbed(tracks, getCurrentIndex(guildId))] });
+    const upcoming = queue.tracks.toArray().slice(0, 10);
+    await message.reply({ embeds: [queueEmbed(current, upcoming, queue.tracks.size + 1)] });
   },
 };

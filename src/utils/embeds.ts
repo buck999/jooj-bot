@@ -1,30 +1,28 @@
 import { EmbedBuilder } from "discord.js";
-import { Track } from "../types";
+import { Track } from "discord-player";
 
 export function nowPlayingEmbed(track: Track): EmbedBuilder {
   return new EmbedBuilder()
     .setColor(0x7289da)
     .setTitle("🎵 Tocando agora")
-    .setDescription(`**[${track.title}](${track.url})**`)
+    .setDescription(`**[${track.cleanTitle}](${track.url})**`)
     .addFields(
-      { name: "Duração", value: track.duration, inline: true },
-      { name: "Pedido por", value: track.requestedBy, inline: true },
+      { name: "Duração", value: track.duration || "?", inline: true },
+      { name: "Pedido por", value: track.requestedBy?.displayName ?? "?", inline: true },
     );
 }
 
-export function queueEmbed(tracks: readonly Track[], current: number): EmbedBuilder {
-  const list = tracks
-    .map((t, i) => {
-      const prefix = i === current ? "▶️" : `${i + 1}.`;
-      return `${prefix} **${t.title}** — ${t.duration}`;
-    })
-    .join("\n");
+export function queueEmbed(current: Track, upcoming: readonly Track[], total: number): EmbedBuilder {
+  const list = [
+    `▶️ **${current.cleanTitle}** — ${current.duration}`,
+    ...upcoming.map((t, i) => `${i + 1}. **${t.cleanTitle}** — ${t.duration}`),
+  ].join("\n");
 
   return new EmbedBuilder()
     .setColor(0x7289da)
     .setTitle("📋 Fila de músicas")
-    .setDescription(list || "Fila vazia.")
-    .setFooter({ text: `${tracks.length} música(s) na fila` });
+    .setDescription(list)
+    .setFooter({ text: `${total} música(s) na fila` });
 }
 
 export function errorEmbed(message: string): EmbedBuilder {

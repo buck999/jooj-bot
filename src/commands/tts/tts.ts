@@ -7,7 +7,8 @@ import {
   AudioPlayerStatus,
   StreamType,
   NoSubscriberBehavior,
-} from "@discordjs/voice";
+} from "discord-voip";
+import { useQueue } from "discord-player";
 import { Command } from "../../types";
 import { generateSpeech, bufferToReadable } from "../../services/tts/elevenlabs";
 import { errorEmbed, successEmbed } from "../../utils/embeds";
@@ -33,6 +34,11 @@ export const ttsCommand: Command = {
 
     if (text.length > 5000) {
       await message.reply({ embeds: [errorEmbed("Texto muito longo (máximo 5000 caracteres).")] });
+      return;
+    }
+
+    if (useQueue(message.guildId!)?.isPlaying()) {
+      await message.reply({ embeds: [errorEmbed("Tem música tocando agora, use `!stop` antes do TTS.")] });
       return;
     }
 

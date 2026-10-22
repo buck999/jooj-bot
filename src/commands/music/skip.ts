@@ -1,6 +1,6 @@
 import { Message } from "discord.js";
+import { useQueue } from "discord-player";
 import { Command } from "../../types";
-import { skipCurrent } from "../../services/music/player";
 import { errorEmbed, successEmbed } from "../../utils/embeds";
 
 export const skipCommand: Command = {
@@ -14,8 +14,8 @@ export const skipCommand: Command = {
       return;
     }
 
-    const skipped = skipCurrent(message.guildId!);
-    if (skipped) {
+    const queue = useQueue(message.guildId!);
+    if (queue?.isPlaying() && queue.node.skip()) {
       await message.reply({ embeds: [successEmbed("Música pulada.")] });
     } else {
       await message.reply({ embeds: [errorEmbed("Não há música tocando.")] });
