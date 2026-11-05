@@ -1,0 +1,73 @@
+# Configuração do Lavalink (servidor de áudio).
+# Valores ${VAR:padrão} vêm do .env via docker compose.
+server:
+  port: 2333
+  address: 0.0.0.0
+
+lavalink:
+  plugins:
+    # Snapshot do main (2026-09-17): traz correções ainda sem release, como o User-Agent
+    # do cliente TV (#233), a versão do ANDROID (#231) e o IOS tocável. Volte para um
+    # release (https://github.com/lavalink-devs/youtube-source/releases) quando sair um > 1.18.2.
+    - dependency: "dev.lavalink.youtube:youtube-plugin:2be8e542d3f6f178e048dca565892684c2e40177"
+      snapshot: true
+
+  server:
+    password: "${LAVALINK_PASSWORD}"
+    sources:
+      # Fonte embutida desativada: o plugin youtube-source a substitui
+      youtube: false
+      soundcloud: true
+      bandcamp: true
+      twitch: true
+      vimeo: true
+      # "http" toca URLs diretas; o módulo de TTS usa isso para tocar o áudio gerado
+      http: true
+      local: false
+
+    # Buffer nativo do JDA-NAS: segura pausas de GC/rede de até 400 ms sem cortar o áudio
+    bufferDurationMs: 400
+    # Quanto áudio já decodificado fica pronto por player (5 s absorve oscilações do YouTube)
+    frameBufferDurationMs: 5000
+    opusEncodingQuality: 10
+    resamplingQuality: HIGH
+    trackStuckThresholdMs: 10000
+    useSeekGhosting: true
+    youtubePlaylistLoadLimit: 6
+    playerUpdateInterval: 5
+    gc-warnings: true
+
+plugins:
+  youtube:
+    enabled: true
+    allowSearch: true
+    allowDirectVideoIds: true
+    allowDirectPlaylistIds: true
+    # Ordem de tentativa: os que entregam Opus (sem transcodificação) vêm primeiro; IOS precisa
+    # transcodificar. WEB hoje costuma devolver só SABR, então fica no fim.
+    # Com OAuth ativado, adicione "TV" a esta lista (só toca com login).
+    clients:
+      - MUSIC
+      - ANDROID
+      - ANDROID_VR
+      - IOS
+      - TVHTML5_SIMPLY
+      - WEB
+      - WEBEMBEDDED
+    oauth:
+      # Use uma conta DESCARTÁVEL: o próprio plugin avisa que a conta pode ser banida.
+      # No 1º start com enabled=true e sem token, o log mostra um link + código para autorizar,
+      # e depois imprime o refresh token. Cole no .env (YOUTUBE_REFRESH_TOKEN) para os próximos starts.
+      enabled: ${YOUTUBE_OAUTH_ENABLED:false}
+      refreshToken: "${YOUTUBE_REFRESH_TOKEN:}"
+
+metrics:
+  prometheus:
+    enabled: false
+
+logging:
+  level:
+    root: INFO
+    lavalink: INFO
+    # Mostra o link/código do fluxo OAuth e o refresh token no terminal
+    dev.lavalink.youtube.http.YoutubeOauth2Handler: INFO

@@ -1,0 +1,31 @@
+# Uso:
+#   docker compose up -d lavalink   -> só o Lavalink (bot rodando com `npm run dev` no host)
+#   docker compose up -d --build    -> Lavalink + bot (produção)
+services:
+  lavalink:
+    image: ghcr.io/lavalink-devs/lavalink:4.2.2
+    restart: unless-stopped
+    environment:
+      LAVALINK_PASSWORD: ${LAVALINK_PASSWORD:?defina LAVALINK_PASSWORD no .env}
+      YOUTUBE_OAUTH_ENABLED: ${YOUTUBE_OAUTH_ENABLED:-false}
+      YOUTUBE_REFRESH_TOKEN: ${YOUTUBE_REFRESH_TOKEN:-}
+      _JAVA_OPTIONS: -Xmx512M
+    volumes:
+      # O plugin do YouTube é baixado no start; logs saem em `docker compose logs lavalink`
+      - ./lavalink/application.yml:/opt/Lavalink/application.yml:ro
+    ports:
+      # Exposto só em localhost: o bot no host acessa, a internet não
+      - "127.0.0.1:2333:2333"
+    extra_hosts:
+      # Permite ao Lavalink buscar o áudio de TTS no bot quando o bot roda fora do Docker
+      - "host.docker.internal:host-gateway"
+
+  bot:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      - lavalink
+    env_file: .env
+    environment:
+      LAVALINK_HOST: lavalink
+      MEDIA_PUBLIC_URL: http://bot:3001
