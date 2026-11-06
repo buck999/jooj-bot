@@ -18,7 +18,13 @@ Registro cronológico do que foi feito, por quê, quais problemas apareceram e c
 - Tempo do comando até o áudio começar: **~1,8 s** (antes ~30 s).
 - Ambiente: WSL2 (Ubuntu 24.04) com Docker Engine, no mesmo PC Windows usado para testar no Discord.
 - Pendências:
-  - [ ] Testar playlist, `!skip`, `!pause`/`!resume`, `!tts`, e a saída automática com canal vazio (30 s) e com fila vazia (60 s).
+- TTS: `!tts <voz>: <texto>` com ElevenLabs no plano **gratuito** (`eleven_flash_v2_5`, vozes premade,
+  máx. 300 caracteres). Com música tocando, o TTS entra na fila logo após a faixa atual. `!vozes` lista os apelidos.
+  - [ ] Testar playlist, `!skip`, `!pause`/`!resume` e a saída automática com canal vazio (30 s) e com fila vazia (60 s).
+  - [ ] Testar o `!tts` no Discord: as vozes PT e EN, um TTS durante a música (dois seguidos) e uma menção no texto.
+  - [ ] Próxima fase do TTS: vozes com sotaque brasileiro (exigem plano pago) e tags de emoção do `eleven_v3`.
+  - [ ] `postinstall` do `package.json` ainda corrige o `discord-player-googlevideo`, que já foi removido: um
+    `npm install` limpo deve falhar. Remover o script.
   - [ ] Ouvir uma faixa longa (10+ min) e conferir se aparece o aviso de perda de frames no log.
   - [ ] Voltar o youtube-source para um release quando sair um maior que 1.18.2.
   - [ ] Se o YouTube voltar a bloquear: ativar o OAuth com uma conta descartável (passo a passo no README).
@@ -26,6 +32,27 @@ Registro cronológico do que foi feito, por quê, quais problemas apareceram e c
   - [ ] Decidir o que fazer com o `git stash` do extractor antigo (pode ser descartado).
 
 ---
+
+## 2026-11-06 — TTS com apelidos de voz, PT/EN e fila compartilhada com a música
+**Feito:** `!tts <voz>: <texto>` (ex.: `!tts vozhomem1: olá bom dia`) e `!vozes`. Arquivos novos:
+`modules/tts/voices.ts` (catálogo de apelidos: 4 PT, 2 EN) e `modules/tts/parse.ts` (interpreta o comando e
+limpa a sintaxe do Discord: menções viram nomes, emojis customizados somem, URLs viram "link", markdown sai).
+Modelo trocado para `eleven_flash_v2_5` com `language_code` vindo da voz. Erros do ElevenLabs agora chegam
+em PT-BR. Com música tocando, o TTS entra na fila **logo após a faixa atual**, depois de outros TTS que já
+estejam esperando. Antes ele era recusado. O áudio fica 2 h no servidor de mídia (antes 10 min) e sai
+assim que a faixa termina. Saiu a variável `ELEVENLABS_VOICE_ID`.
+**Por quê:** começar pelo básico sem custo. O plano gratuito dá 10 mil créditos/mês, e o flash v2.5 custa
+0,5 crédito por caractere (o multilingual v2 custava 1). O limite de 300 caracteres por mensagem também poupa
+crédito. O usuário escolheu o idioma pelo apelido da voz e o TTS logo após a música atual.
+**Problemas → solução:**
+- Vozes PT-BR da Voice Library salvas na conta (Leonardo Hamaral, Beatriz…) dão `402 paid_plan_required`
+  no plano gratuito, mesmo salvas. Testado pela API → o catálogo usa só vozes premade, que falam PT com `language_code: "pt"`.
+- Com uma música longa na frente, o TTL de 10 min do áudio poderia vencer antes da vez do TTS → TTL de 2 h,
+  com remoção no `trackEnd`/`trackError`.
+- Uma palavra solta antes de ":" que não seja apelido (ex.: `!tts atenção: galera`) dá erro de "voz
+  desconhecida" de propósito, para não ler um apelido digitado errado em voz alta.
+**Pendências:** teste no Discord (ver "Estado atual").
+**Commits:** (este commit)
 
 ## 2026-11-05 — Registro de contexto entre sessões
 **Feito:** criados `CLAUDE.md` (contexto lido em toda sessão), este devlog e `docs/decisions.md`.

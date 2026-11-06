@@ -44,7 +44,6 @@ export const config = {
 
   elevenLabs: {
     apiKey: process.env.ELEVENLABS_API_KEY ?? "",
-    voiceId: process.env.ELEVENLABS_VOICE_ID || "21m00Tcm4TlvDq8ikWAM",
   },
 } as const;
 

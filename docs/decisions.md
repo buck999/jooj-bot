@@ -23,8 +23,7 @@ O que for comum a vários módulos vira serviço em `src/services/`.
 **Contexto:** o Discord permite uma conexão de voz por servidor, e tanto a música quanto o TTS precisam dela.
 **Decisão:** `services/voice` é o dono único do `LavalinkManager` e das regras de saída do canal (vazio por
 30 s; fila vazia por 60 s). Faixas com `userData.silent` não são anunciadas pelo módulo de música.
-**Consequências:** o TTS fica bloqueado enquanto houver música tocando, porque o Lavalink não mistura duas
-faixas.
+**Consequências:** o Lavalink não mistura duas faixas, então TTS e música dividem a mesma fila (ver item 6).
 
 ## 4. TTS tocado pelo Lavalink via servidor HTTP interno (2026-11-05)
 **Contexto:** o áudio do ElevenLabs é gerado no bot, mas quem toca é o Lavalink.
@@ -39,3 +38,14 @@ faixas.
 **Decisão:** usar o snapshot `2be8e542` do `main`, que corrige os clientes TV, ANDROID e IOS.
 **Consequências:** um snapshot pode quebrar sem aviso. Volte para um release estável assim que sair um
 maior que 1.18.2. O plano B contra bloqueios é o OAuth com uma conta descartável.
+
+## 6. TTS na fila logo após a faixa atual, no plano gratuito do ElevenLabs (2026-11-06)
+**Contexto:** antes, o TTS era recusado com música tocando, e as piadas não podem esperar a playlist inteira.
+O desenvolvimento usa o plano gratuito do ElevenLabs.
+**Decisão:** o TTS entra na fila logo após a faixa atual, depois de outros TTS já esperando (ordem de chegada).
+O modelo é o `eleven_flash_v2_5` (0,5 crédito/caractere, aceita `language_code`), com o idioma definido pelo
+apelido da voz. São só vozes premade, porque o plano gratuito recusa vozes da Library pela API
+(`paid_plan_required`), e o limite é de 300 caracteres por mensagem.
+**Consequências:** as vozes têm sotaque estrangeiro falando PT. Vozes brasileiras de verdade e tags de emoção
+(`eleven_v3`) exigem o plano pago e são a próxima fase. O áudio fica até 2 h no servidor de mídia, porque pode
+esperar uma música longa terminar.
