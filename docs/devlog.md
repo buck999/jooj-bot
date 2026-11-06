@@ -21,7 +21,6 @@ Registro cronológico do que foi feito, por quê, quais problemas apareceram e c
 - TTS: `!tts <voz>: <texto>` com ElevenLabs no plano **gratuito** (`eleven_flash_v2_5`, vozes premade,
   máx. 300 caracteres). Com música tocando, o TTS entra na fila logo após a faixa atual. `!vozes` lista os apelidos.
   - [ ] Testar playlist, `!skip`, `!pause`/`!resume` e a saída automática com canal vazio (30 s) e com fila vazia (60 s).
-  - [ ] Testar o `!tts` no Discord: as vozes PT e EN, um TTS durante a música (dois seguidos) e uma menção no texto.
   - [ ] Próxima fase do TTS: vozes com sotaque brasileiro (exigem plano pago) e tags de emoção do `eleven_v3`.
   - [ ] `postinstall` do `package.json` ainda corrige o `discord-player-googlevideo`, que já foi removido: um
     `npm install` limpo deve falhar. Remover o script.
@@ -51,8 +50,8 @@ crédito. O usuário escolheu o idioma pelo apelido da voz e o TTS logo após a 
   com remoção no `trackEnd`/`trackError`.
 - Uma palavra solta antes de ":" que não seja apelido (ex.: `!tts atenção: galera`) dá erro de "voz
   desconhecida" de propósito, para não ler um apelido digitado errado em voz alta.
-**Pendências:** teste no Discord (ver "Estado atual").
-**Commits:** (este commit)
+**Pendências:** nenhuma. Em 2026-11-06 o usuário testou no Discord e confirmou que funcionou. Segue na `develop`, ainda sem PR para a `main`.
+**Commits:** 595f8f2
 
 ## 2026-11-05 — Registro de contexto entre sessões
 **Feito:** criados `CLAUDE.md` (contexto lido em toda sessão), este devlog e `docs/decisions.md`.
