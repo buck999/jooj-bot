@@ -17,11 +17,12 @@ Registro cronológico do que foi feito, por quê, quais problemas apareceram e c
 - Áudio rodando via Lavalink (Docker) com o plugin youtube-source em **snapshot** (`2be8e54`).
 - Tempo do comando até o áudio começar: **~1,8 s** (antes ~30 s).
 - Ambiente: WSL2 (Ubuntu 24.04) com Docker Engine, no mesmo PC Windows usado para testar no Discord.
-- Pendências:
 - TTS: `!tts <voz>: <texto>` com ElevenLabs no plano **gratuito** (`eleven_flash_v2_5`, vozes premade,
   máx. 300 caracteres). Com música tocando, o TTS entra na fila logo após a faixa atual. `!vozes` lista os apelidos.
+- Pendências:
   - [ ] Testar playlist, `!skip`, `!pause`/`!resume` e a saída automática com canal vazio (30 s) e com fila vazia (60 s).
-  - [ ] Próxima fase do TTS: vozes com sotaque brasileiro (exigem plano pago) e tags de emoção do `eleven_v3`.
+  - [ ] Próxima fase do TTS: vozes com sotaque brasileiro (exigem plano pago) tags de emoção do `eleven_v3` e mais apelidos
+    (candidatas premade: Harry, Bill, Charlie; lista completa via `GET /v1/voices`).
   - [ ] `postinstall` do `package.json` ainda corrige o `discord-player-googlevideo`, que já foi removido: um
     `npm install` limpo deve falhar. Remover o script.
   - [ ] Ouvir uma faixa longa (10+ min) e conferir se aparece o aviso de perda de frames no log.
