@@ -21,7 +21,7 @@ Registro cronológico do que foi feito, por quê, quais problemas apareceram e c
   máx. 300 caracteres). Com música tocando, o TTS entra na fila logo após a faixa atual. `!vozes` lista os apelidos.
 - Pendências:
   - [ ] Testar playlist, `!skip`, `!pause`/`!resume` e a saída automática com canal vazio (30 s) e com fila vazia (60 s).
-  - [ ] Próxima fase do TTS: vozes com sotaque brasileiro (exigem plano pago) tags de emoção do `eleven_v3` e mais apelidos
+  - [ ] Próxima fase do TTS: vozes com sotaque brasileiro (exigem plano pago), tags de emoção do `eleven_v3` e mais apelidos
     (candidatas premade: Harry, Bill, Charlie; lista completa via `GET /v1/voices`).
   - [ ] `postinstall` do `package.json` ainda corrige o `discord-player-googlevideo`, que já foi removido: um
     `npm install` limpo deve falhar. Remover o script.
